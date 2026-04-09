@@ -1,6 +1,6 @@
 # Piper TTS — Ren'Py Self-Voicing on Linux
 
-Use natural-sounding AI voices in [Ren'Py](https://www.renpy.org/) visual novels on Linux, powered by [Piper TTS](https://github.com/rhasspy/piper).
+Use natural-sounding AI voices in [Ren'Py](https://www.renpy.org/) visual novels on Linux, powered by [Piper TTS](https://github.com/OHF-Voice/piper1-gpl).
 
 Ren'Py's built-in self-voicing feature uses `espeak` to read dialogue aloud. This project replaces it with a wrapper script that silently redirects speech synthesis to Piper — a fast, local neural TTS engine — while staying fully compatible with Ren'Py's existing self-voicing system.
 
@@ -22,8 +22,8 @@ Ren'Py's built-in self-voicing feature uses `espeak` to read dialogue aloud. Thi
 ## Requirements
 
 - Linux (x86_64)
+- Python 3.9 or later: `sudo apt install python3`
 - `aplay` (ALSA/PulseAudio): `sudo apt install alsa-utils`
-- `wget`: `sudo apt install wget`
 - *(Optional)* `xdotool` for auto-skip: `sudo apt install xdotool`
 
 ---
@@ -31,23 +31,18 @@ Ren'Py's built-in self-voicing feature uses `espeak` to read dialogue aloud. Thi
 ## Quick Install
 
 ```bash
-# 1. Create directories
+# 1. Install piper-tts (Python package)
+pip install --user piper-tts
+
+# 2. Create the model directory
 mkdir -p $HOME/.local/share/piper/models
-mkdir -p $HOME/.local/share/piper/scripts
-mkdir -p $HOME/.local/bin
 
-# 2. Download and extract Piper
-wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
-tar xvfz piper_amd64.tar.gz --strip-components=1 -C $HOME/.local/share/piper
-ln -sf $HOME/.local/share/piper/piper $HOME/.local/bin/piper
-
-# 3. Download a voice model (US English female)
-wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" \
-    -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx
-wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true" \
-    -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx.json
+# 3. Download a voice model (UK English female)
+python3 -m piper.download_voices en_GB-jenny_dioco-medium \
+    --data-dir $HOME/.local/share/piper/models
 
 # 4. Install the espeak wrapper
+mkdir -p $HOME/.local/share/piper/scripts
 cp piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
 chmod +x $HOME/.local/share/piper/scripts/espeak
 ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
@@ -56,7 +51,7 @@ ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
 espeak "Piper installation complete."
 ```
 
-> `$HOME/.local/bin` is included in PATH by default on most modern Linux distributions (Ubuntu 21.04+, Fedora, Arch, etc.). If `espeak` is not found, add it to your shell profile.
+> `$HOME/.local/bin` is included in PATH by default on most modern Linux distributions (Ubuntu 21.04+, Fedora, Arch, etc.). If `espeak` is not found, add it to your shell profile: `export PATH="$HOME/.local/bin:$PATH"`
 
 See [`install.sh`](install.sh) for the full annotated script, and [`guide.txt`](guide.txt) for step-by-step instructions.
 
@@ -78,15 +73,21 @@ Edit the `MODEL` variable at the top of `$HOME/.local/share/piper/scripts/espeak
 # Available models (uncomment one):
 #MODEL=en_GB-cori-high
 #MODEL=en_GB-alba-medium
-#MODEL=en_GB-jenny_dioco-medium
+MODEL=en_GB-jenny_dioco-medium
 #MODEL=en_GB-semaine-medium
-MODEL=en_US-hfc_female-medium
+#MODEL=en_US-hfc_female-medium
 #MODEL=en_US-amy-medium
 ```
 
 Browse all available voices at: **https://rhasspy.github.io/piper-samples/**
 
-After downloading, place `.onnx` and `.onnx.json` files in `$HOME/.local/share/piper/models/`.
+Download additional voices with:
+
+```bash
+python3 -m piper.download_voices                                      # list all voices
+python3 -m piper.download_voices en_US-lessac-medium \
+    --data-dir $HOME/.local/share/piper/models
+```
 
 ---
 

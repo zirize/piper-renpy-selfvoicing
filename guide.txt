@@ -1,8 +1,162 @@
-**Important note:**  
-If you are using espeak outside of Ren'Py, you may experience conflicts.
-
 **Disclaimer:**  
 This guide is intended for regular users, not developers.
+
+**Summary:**
+
+Piper is considered one of the best free TTS (Text-to-Speech) engines for Linux. It is a fast, local neural text-to-speech system that delivers high-quality sound.
+
+Ren'Py uses espeak to generate voice. This guide provides a method to use Piper with an espeak wrapper.
+
+Piper TTS >= 1.4.2 is a Python package maintained by the Open Home Foundation.
+Project home: https://github.com/OHF-Voice/piper1-gpl
+
+**Guide:**
+
+Check your Python version (3.9 or later required):
+
+    python3 --version
+
+Check that pip is available:
+
+    python3 -m pip --version
+
+If pip is missing, install it:
+
+    sudo apt install python3-pip
+
+Check if aplay is installed:
+
+    aplay --version
+
+If missing, install it:
+
+    sudo apt install alsa-utils
+
+Install piper-tts from PyPI:
+
+    pip install --user piper-tts
+
+Or install from a locally downloaded wheel file:
+
+    pip install --user /path/to/piper_tts-1.4.2-*.whl
+
+Verify piper is installed:
+
+    piper --help
+
+If piper is not found, make sure ~/.local/bin is in your PATH:
+
+    export PATH="$HOME/.local/bin:$PATH"
+
+(Add this line to ~/.bashrc to make it permanent.)
+
+Create the model directory:
+
+    mkdir -p $HOME/.local/share/piper/models
+
+List all available voices (requires internet):
+
+    python3 -m piper.download_voices
+
+Download a voice model — for example, UK English (jenny_dioco):
+
+    python3 -m piper.download_voices en_GB-jenny_dioco-medium \
+        --data-dir $HOME/.local/share/piper/models
+
+Or download a US English voice:
+
+    python3 -m piper.download_voices en_US-hfc_female-medium \
+        --data-dir $HOME/.local/share/piper/models
+
+Install the espeak wrapper script:
+
+    mkdir -p $HOME/.local/share/piper/scripts
+    cp piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
+    chmod +x $HOME/.local/share/piper/scripts/espeak
+
+Create a symlink so 'espeak' is found in PATH:
+
+    ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
+
+Test the installation:
+
+    espeak "Piper installation complete."
+
+If you can hear the voice, the installation was successful.
+
+
+The content of the espeak wrapper script (piper_espeak_wrapper.sh):
+
+    #!/bin/bash
+
+    # This is a dummy espeak file used as a wrapper script for utilizing piper.
+    # It allows Ren'Py engines to utilize piper as a TTS engine.
+    # Requires: piper-tts >= 1.4.2 (pip install --user piper-tts)
+    # Home page: https://github.com/OHF-Voice/piper1-gpl
+
+    # Set the model to use.
+    #MODEL=en_GB-cori-high
+    #MODEL=en_GB-alba-medium
+    MODEL=en_GB-jenny_dioco-medium
+    #MODEL=en_GB-semaine-medium
+    #MODEL=en_US-hfc_female-medium
+    #MODEL=en_US-amy-medium
+
+    # Set the model directory and piper binary.
+    PIPER_MODEL_DIR=$HOME/.local/share/piper/models
+    PIPER_BIN=$HOME/.local/bin/piper
+
+    # Use --data-dir so piper finds the model by name (auto-detects .onnx.json).
+    OPT_MODEL_DATA="--model $MODEL --data-dir $PIPER_MODEL_DIR"
+
+    PLAY="aplay -D pulse -q -r 22050 -f S16_LE -t raw -"
+
+    if [ $# -eq 0 ]; then exit 0; fi
+
+    while getopts "v:a:" opt; do
+        case $opt in v) ;; a) ;; *) ;; esac
+    done
+    shift $((OPTIND - 1))
+
+    text=$(echo "$@" | sed 's/\b$(ls)\b//g')
+    if [ -p /dev/stdin ]; then text=$(cat); fi
+    if [ -z "$text" ]; then exit 0; fi
+
+    text=$(echo "$text" | sed 's/[…–]/  /g' 2>/dev/null)
+    text=$(echo "$text" | sed 's/[']/\x27/g' 2>/dev/null)
+    text=$(echo "$text" | sed 's/[^-a-zA-Z0-9,.?!:;@$%&"\x27 ]//g' 2>/dev/null)
+
+    tmp=$(echo $text | tr -d ' ')
+    if [ ${#tmp} -eq 0 ]; then exit 0; fi
+
+    if [[ $text == "Self-voicing"* ]]; then exit 0; fi
+    if [[ $text == "Skipping:"* ]]; then exit 0; fi
+
+    /usr/bin/pkill -x "piper"
+    /usr/bin/pkill -x "aplay"
+    /usr/bin/pkill -x "pw-play"
+
+    echo -e $text | $PIPER_BIN $OPT_MODEL_DATA --output-raw 2>/dev/null | $PLAY 2>/dev/null
+
+
+Visit this URL to browse all available models:
+https://rhasspy.github.io/piper-samples/
+
+Download additional models with:
+
+    python3 -m piper.download_voices <model-name> --data-dir $HOME/.local/share/piper/models
+
+Update the MODEL variable in the wrapper script to use the new model:
+
+    MODEL=en_US-lessac-medium
+
+Some recommended models:
+- en_GB-jenny_dioco-medium (default)
+- en_US-hfc_female-medium
+- en_US-amy-medium
+- en_GB-cori-high
+- en_GB-alba-medium
+- en_GB-semaine-medium
 
 **Summary:**
 

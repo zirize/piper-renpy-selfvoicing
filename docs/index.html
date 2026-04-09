@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Piper TTS for Ren'Py Self-Voicing on Linux</title>
-  <meta name="description" content="Use natural AI voices in Ren'Py visual novels on Linux. Replace espeak with Piper TTS for high-quality, local text-to-speech self-voicing." />
-  <meta name="keywords" content="Piper TTS, Ren'Py, self-voicing, text-to-speech, Linux, espeak, TTS, visual novel, accessibility" />
+  <meta name="description" content="Use natural AI voices in Ren'Py visual novels on Linux. Replace espeak with Piper TTS (Python package) for high-quality, local text-to-speech self-voicing." />
+  <meta name="keywords" content="Piper TTS, piper-tts, Ren'Py, self-voicing, text-to-speech, Linux, espeak, TTS, visual novel, accessibility, OHF Voice, Open Home Foundation" />
   <meta name="author" content="zirize" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zirize.github.io/piper-renpy-selfvoicing/" />
@@ -261,7 +261,7 @@
   <p>
     Ren'Py calls <code>espeak -v &lt;voice&gt; -a &lt;amp&gt; &lt;text&gt;</code> whenever self-voicing is active.
     This project installs a wrapper script named <code>espeak</code> that intercepts those calls
-    and redirects speech synthesis to <a href="https://github.com/rhasspy/piper" target="_blank" rel="noopener">Piper TTS</a> instead.
+    and redirects speech synthesis to <a href="https://github.com/OHF-Voice/piper1-gpl" target="_blank" rel="noopener">Piper TTS</a> instead.
     The audio is played back immediately via <code>aplay</code>.
   </p>
   <p>
@@ -274,47 +274,41 @@
     <div class="step-num">1</div>
     <div class="step-body">
       <h3>Install dependencies</h3>
-      <pre><code>sudo apt install alsa-utils wget</code></pre>
+      <pre><code>sudo apt install python3 python3-pip alsa-utils</code></pre>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">2</div>
     <div class="step-body">
-      <h3>Create directories</h3>
-      <pre><code>mkdir -p $HOME/.local/share/piper/models
-mkdir -p $HOME/.local/share/piper/scripts
-mkdir -p $HOME/.local/bin</code></pre>
+      <h3>Install piper-tts</h3>
+      <pre><code>pip install --user piper-tts</code></pre>
+      <p>Or from a locally downloaded wheel: <code>pip install --user /path/to/piper_tts-1.4.2-*.whl</code></p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <h3>Download and extract Piper</h3>
-      <pre><code>wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
-tar xvfz piper_amd64.tar.gz --strip-components=1 -C $HOME/.local/share/piper
-ln -sf $HOME/.local/share/piper/piper $HOME/.local/bin/piper</code></pre>
+      <h3>Create model directory and download a voice</h3>
+      <pre><code>mkdir -p $HOME/.local/share/piper/models
+
+# List all available voices:
+python3 -m piper.download_voices
+
+# Download UK English (jenny_dioco):
+python3 -m piper.download_voices en_GB-jenny_dioco-medium \
+    --data-dir $HOME/.local/share/piper/models</code></pre>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">4</div>
     <div class="step-body">
-      <h3>Download a voice model</h3>
-      <pre><code>wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" \
-    -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx
-wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true" \
-    -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx.json</code></pre>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-num">5</div>
-    <div class="step-body">
       <h3>Install the wrapper script</h3>
       <pre><code># Clone this repo (or download the script manually)
 git clone https://github.com/zirize/piper-renpy-selfvoicing.git
+mkdir -p $HOME/.local/share/piper/scripts
 cp piper-renpy-selfvoicing/piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
 chmod +x $HOME/.local/share/piper/scripts/espeak
 ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak</code></pre>
@@ -322,7 +316,7 @@ ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak</code></p
   </div>
 
   <div class="step">
-    <div class="step-num">6</div>
+    <div class="step-num">5</div>
     <div class="step-body">
       <h3>Test</h3>
       <pre><code>espeak "Piper installation complete."</code></pre>

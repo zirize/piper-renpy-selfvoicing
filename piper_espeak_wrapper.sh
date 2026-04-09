@@ -8,6 +8,10 @@ toggle_file=/run/user/$UID/espeak_auto_skip
 # Recommended for use with Ren'Py engines only.
 # Modify the script to support additional functions if needed.
 
+# Requires: piper-tts >= 1.4.2 installed via pip
+#   pip install --user piper-tts
+# Piper home page: https://github.com/OHF-Voice/piper1-gpl
+
 # Set the model to use.
 # Since Ren'Py calls this script every time it needs to synthesize text,
 # changing this value allows you to change the voice during gameplay.
@@ -18,15 +22,14 @@ MODEL=en_GB-jenny_dioco-medium
 #MODEL=en_US-hfc_female-medium
 #MODEL=en_US-amy-medium
 
-# Set the piper directory and binary.
-PIPER_DIR=$HOME/.local/share/piper
-PIPER_MODEL_DIR=$PIPER_DIR/models
-PIPER_BIN=$PIPER_DIR/piper
+# Set the model directory and piper binary.
+# piper is installed to ~/.local/bin/piper via: pip install --user piper-tts
+PIPER_MODEL_DIR=$HOME/.local/share/piper/models
 PIPER_BIN=$HOME/.local/bin/piper
 
 # Set the options for piper.
-OPT_MODEL_DATA="--model $PIPER_MODEL_DIR/$MODEL.onnx"
-OPT_MODEL_CONFIG="--config $PIPER_MODEL_DIR/$MODEL.onnx.json"
+# Using --data-dir + model name (piper auto-detects the .onnx.json config).
+OPT_MODEL_DATA="--model $MODEL --data-dir $PIPER_MODEL_DIR"
 
 # Set the aplay binary and options.
 
