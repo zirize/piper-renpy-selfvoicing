@@ -1,0 +1,185 @@
+**Important note:**  
+If you are using espeak outside of Ren'Py, you may experience conflicts.
+
+**Disclaimer:**  
+This guide is intended for regular users, not developers.
+
+**Summary:**
+
+Piper is considered one of the best free TTS (Text-to-Speech) engines for Linux. It is a fast, local neural text-to-speech system that delivers high-quality sound.
+
+Ren'Py uses espeak to generate voice. This guide provides a method to use Piper with an espeak wrapper.
+
+For more information, visit: https://github.com/rhasspy/piper
+
+**Guide:**
+
+Check if you have aplay and wget installed. Open your terminal and run:
+
+    aplay --version
+    wget --version
+
+If you don't have them, install them using your package manager (e.g., sudo apt install alsa-utils wget for Ubuntu/Debian).
+
+Create necessary directories
+
+    mkdir -p $HOME/.local/share/piper/models
+    mkdir -p $HOME/.local/share/piper/scripts
+    mkdir -p $HOME/.local/bin
+
+Download the Piper binary for PC
+
+    wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
+
+Extract the downloaded archive to the piper directory
+
+    tar xvfz piper_amd64.tar.gz --strip-components=1 -C $HOME/.local/share/piper
+
+Create a symbolic link for the piper binary
+
+    ln -sf $HOME/.local/share/piper/piper $HOME/.local/bin/piper
+
+Download a model and its config file
+
+    wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" \
+        -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx
+    wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true" \
+        -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx.json
+
+Create an empty espeak script and make it executable
+
+    touch $HOME/.local/share/piper/scripts/espeak
+    chmod +x $HOME/.local/share/piper/scripts/espeak
+
+Open the script file with your favorite text editor
+
+    your_favorite_text_editor $HOME/.local/share/piper/scripts/espeak
+
+
+The content of espeak (copy piper_espeak_wrapper.sh from this repository, or see below for a minimal version):
+
+    #!/bin/bash
+
+    # This is a dummy espeak file used as a wrapper script for utilizing piper.
+    # It allows Ren'Py engines to utilize piper as a TTS engine.
+    # Note: Many espeak functions are not supported.
+    # Recommended for use with Ren'Py engines only.
+
+    # Set the model to use.
+    # Since Ren'Py calls this script every time it needs to synthesize text,
+    # changing this value allows you to change the voice during gameplay.
+    #MODEL=en_GB-cori-high
+    #MODEL=en_GB-alba-medium
+    #MODEL=en_GB-jenny_dioco-medium
+    #MODEL=en_GB-semaine-medium
+    MODEL=en_US-hfc_female-medium
+    #MODEL=en_US-amy-medium
+
+    # Set the piper directory and binary.
+    PIPER_DIR=$HOME/.local/share/piper
+    PIPER_MODEL_DIR=$PIPER_DIR/models
+    PIPER_BIN=$HOME/.local/bin/piper
+
+    # Set the options for piper.
+    OPT_MODEL_DATA="--model $PIPER_MODEL_DIR/$MODEL.onnx"
+
+    # Audio output via PulseAudio
+    PLAY="aplay -D pulse -q -r 22050 -f S16_LE -t raw -"
+
+    # Check if there are no arguments
+    if [ $# -eq 0 ]; then
+        exit 0
+    fi
+
+    # Parse command-line arguments.
+    # Ren'Py passes arguments as -v <voice> -a <amp> <text>.
+    while getopts "v:a:" opt; do
+        case $opt in
+        v) ;;
+        a) ;;
+        *) ;;
+        esac
+    done
+
+    # Shift the parsed options away
+    shift $((OPTIND - 1))
+
+    # Remaining arguments which are the actual text to synthesize.
+    text=$(echo "$@" | sed 's/\b$(ls)\b//g')
+
+    # Check stdin pipe if there is any text.
+    if [ -p /dev/stdin ]; then
+        text=$(cat)
+    fi
+
+    # Check if the text is empty then quit.
+    if [ -z "$text" ]; then
+        exit 0
+    fi
+
+    # Clean up special/unicode characters for piper compatibility
+    text=$(echo "$text" | sed 's/[…–]/  /g' 2>/dev/null)
+    text=$(echo "$text" | sed 's/[']/\x27/g' 2>/dev/null)
+    text=$(echo "$text" | sed 's/[^-a-zA-Z0-9,.?!:;@$%&"\x27 ]//g' 2>/dev/null)
+
+    # Check if text is empty after cleanup
+    tmp=$(echo $text | tr -d ' ')
+    if [ ${#tmp} -eq 0 ]; then
+        exit 0
+    fi
+
+    # Skip Ren'Py self-voicing system messages
+    if [[ $text == "Self-voicing"* ]]; then
+        exit 0
+    fi
+    if [[ $text == "Skipping:"* ]]; then
+        exit 0
+    fi
+
+    # Terminate any previously running instances to prevent overlapping voices.
+    /usr/bin/pkill -x "piper"
+    /usr/bin/pkill -x "aplay"
+    /usr/bin/pkill -x "pw-play"
+
+    # Synthesize the text using piper and play the resulting audio.
+    echo -e $text | $PIPER_BIN $OPT_MODEL_DATA --output-raw 2>/dev/null | $PLAY 2>/dev/null
+
+Create a symbolic link so espeak is found in PATH
+
+    ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
+
+Test the installation
+
+    espeak "Piper installation complete."
+
+If you can hear the voice, the installation was successful.
+
+
+**Optional: Auto-advance (auto-skip) feature**
+
+The full wrapper script (piper_espeak_wrapper.sh) supports automatically pressing Space after each line of dialogue finishes speaking, simulating Ren'Py's auto mode while self-voicing is active.
+
+Requirements:
+- Install xdotool: `sudo apt install xdotool`
+- Set the environment variable before launching Ren'Py: `RENPY_MODE=1 ./your_game`
+
+
+**Available models:**
+
+Visit this URL to browse and download models: https://rhasspy.github.io/piper-samples/
+
+After downloading, place the model and config files in the models directory ($HOME/.local/share/piper/models):
+- A .onnx model file, such as en_US-lessac-medium.onnx
+- A .onnx.json config file, such as en_US-lessac-medium.onnx.json
+
+Update the MODEL variable in the script file to use the model you want:
+
+    MODEL=en_US-lessac-medium
+
+Some recommended models:
+- en_US-hfc_female-medium (default)
+- en_US-amy-medium
+- en_GB-jenny_dioco-medium
+- en_GB-cori-high
+- en_GB-alba-medium
+- en_GB-semaine-medium

@@ -1,0 +1,6 @@
+#MODEL=en_GB-cori-high
+#MODEL=en_GB-alba-medium
+#MODEL=en_GB-jenny_dioco-medium
+#MODEL=en_GB-semaine-medium
+MODEL=en_US-hfc_female-medium
+#MODEL=en_US-amy-medium
