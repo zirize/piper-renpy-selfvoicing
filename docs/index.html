@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piper TTS for Ren'Py Self-Voicing on Linux</title>
+  <meta name="description" content="Use natural AI voices in Ren'Py visual novels on Linux. Replace espeak with Piper TTS for high-quality, local text-to-speech self-voicing." />
+  <meta name="keywords" content="Piper TTS, Ren'Py, self-voicing, text-to-speech, Linux, espeak, TTS, visual novel, accessibility" />
+  <meta name="author" content="zirize" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://zirize.github.io/piper-renpy-selfvoicing/" />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://zirize.github.io/piper-renpy-selfvoicing/" />
+  <meta property="og:title" content="Piper TTS for Ren'Py Self-Voicing on Linux" />
+  <meta property="og:description" content="Replace Ren'Py's default espeak voice with natural-sounding Piper TTS. High-quality, local, free." />
+  <meta property="og:image" content="https://rhasspy.github.io/piper-samples/img/piper-logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Schema.org structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Piper TTS Ren'Py Self-Voicing Wrapper",
+    "description": "An espeak wrapper script that enables Piper TTS for Ren'Py self-voicing on Linux",
+    "operatingSystem": "Linux",
+    "applicationCategory": "Accessibility",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "url": "https://github.com/zirize/piper-renpy-selfvoicing",
+    "author": { "@type": "Person", "name": "zirize" }
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2d3148;
+      --accent: #7c6af7;
+      --accent2: #56c8a0;
+      --text: #e2e4ef;
+      --muted: #8b90b0;
+      --code-bg: #12141e;
+      --radius: 10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #12141e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 60px 20px 50px;
+      text-align: center;
+    }
+    header .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 14px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 28px;
+    }
+    .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: opacity .2s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    main { max-width: 860px; margin: 0 auto; padding: 60px 20px; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 40px 0;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .feature-card .icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .feature-card h3 { font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+    .feature-card p { font-size: 0.875rem; color: var(--muted); }
+
+    h2 {
+      font-size: 1.5rem;
+      margin: 48px 0 16px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    h3 { font-size: 1.1rem; margin: 24px 0 8px; color: var(--accent2); }
+    p { margin-bottom: 12px; color: var(--muted); }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      overflow-x: auto;
+      margin: 12px 0 20px;
+    }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 0.875rem;
+      color: var(--accent2);
+    }
+    p code, li code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.85em;
+    }
+
+    ul, ol { padding-left: 24px; color: var(--muted); margin-bottom: 12px; }
+    li { margin-bottom: 4px; }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      margin: 20px 0;
+      align-items: flex-start;
+    }
+    .step-num {
+      min-width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-body { flex: 1; }
+    .step-body h3 { margin-top: 0; }
+
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    th { background: var(--surface); text-align: left; padding: 10px 14px; font-size: 0.875rem; border: 1px solid var(--border); color: var(--muted); font-weight: 600; }
+    td { padding: 10px 14px; font-size: 0.875rem; border: 1px solid var(--border); color: var(--muted); }
+
+    .note {
+      background: var(--surface);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Accessibility Tool</div>
+  <h1>Piper TTS for Ren'Py Self-Voicing</h1>
+  <p>Replace Ren'Py's robotic <code>espeak</code> voice with natural-sounding AI speech on Linux — free, local, no internet required.</p>
+  <div class="btn-group">
+    <a class="btn btn-primary" href="https://github.com/zirize/piper-renpy-selfvoicing">
+      ⭐ View on GitHub
+    </a>
+    <a class="btn btn-secondary" href="https://www.reddit.com/r/RenPy/comments/1ganueb/selfvoicing_with_natural_voices_with_pipertts_on/">
+      💬 Reddit Guide
+    </a>
+    <a class="btn btn-secondary" href="https://rhasspy.github.io/piper-samples/">
+      🔊 Browse Voices
+    </a>
+  </div>
+</header>
+
+<main>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">🧠</div>
+      <h3>Neural TTS</h3>
+      <p>Piper uses ONNX neural models for natural, human-like voice synthesis.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔒</div>
+      <h3>100% Offline</h3>
+      <p>All processing is local. No API keys, no internet connection needed during use.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🎮</div>
+      <h3>Ren'Py Compatible</h3>
+      <p>Works transparently with Ren'Py's built-in self-voicing (press <code>V</code>).</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🌍</div>
+      <h3>Multiple Voices</h3>
+      <p>Choose from US and UK English voices. Switch with one line change.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">⚡</div>
+      <h3>Fast</h3>
+      <p>Low latency synthesis — speech starts within milliseconds of each line.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">♿</div>
+      <h3>Accessibility</h3>
+      <p>Makes visual novels accessible to visually impaired players on Linux.</p>
+    </div>
+  </div>
+
+  <h2>How It Works</h2>
+  <p>
+    Ren'Py calls <code>espeak -v &lt;voice&gt; -a &lt;amp&gt; &lt;text&gt;</code> whenever self-voicing is active.
+    This project installs a wrapper script named <code>espeak</code> that intercepts those calls
+    and redirects speech synthesis to <a href="https://github.com/rhasspy/piper" target="_blank" rel="noopener">Piper TTS</a> instead.
+    The audio is played back immediately via <code>aplay</code>.
+  </p>
+  <p>
+    Ren'Py never knows the difference — it still calls <code>espeak</code>, but now it sounds natural.
+  </p>
+
+  <h2>Installation</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Install dependencies</h3>
+      <pre><code>sudo apt install alsa-utils wget</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Create directories</h3>
+      <pre><code>mkdir -p $HOME/.local/share/piper/models
+mkdir -p $HOME/.local/share/piper/scripts
+mkdir -p $HOME/.local/bin</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Download and extract Piper</h3>
+      <pre><code>wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
+tar xvfz piper_amd64.tar.gz --strip-components=1 -C $HOME/.local/share/piper
+ln -sf $HOME/.local/share/piper/piper $HOME/.local/bin/piper</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Download a voice model</h3>
+      <pre><code>wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" \
+    -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx
+wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true" \
+    -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx.json</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Install the wrapper script</h3>
+      <pre><code># Clone this repo (or download the script manually)
+git clone https://github.com/zirize/piper-renpy-selfvoicing.git
+cp piper-renpy-selfvoicing/piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
+chmod +x $HOME/.local/share/piper/scripts/espeak
+ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <h3>Test</h3>
+      <pre><code>espeak "Piper installation complete."</code></pre>
+      <p>If you hear the voice, you're done! Launch a Ren'Py game and press <code>V</code> to enable self-voicing.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    💡 <code>$HOME/.local/bin</code> is in PATH by default on Ubuntu 21.04+, Fedora, Arch, and most modern distros. If <code>espeak</code> is not found, run <code>export PATH="$HOME/.local/bin:$PATH"</code> or add it to your <code>~/.bashrc</code>.
+  </div>
+
+  <h2>Available Voice Models</h2>
+  <p>Browse all voices at <a href="https://rhasspy.github.io/piper-samples/" target="_blank" rel="noopener">rhasspy.github.io/piper-samples</a>. Some recommended options:</p>
+
+  <table>
+    <thead>
+      <tr><th>Model ID</th><th>Language</th><th>Quality</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>en_US-hfc_female-medium</code></td><td>US English</td><td>Medium (default)</td></tr>
+      <tr><td><code>en_US-amy-medium</code></td><td>US English</td><td>Medium</td></tr>
+      <tr><td><code>en_GB-jenny_dioco-medium</code></td><td>UK English</td><td>Medium</td></tr>
+      <tr><td><code>en_GB-cori-high</code></td><td>UK English</td><td>High</td></tr>
+      <tr><td><code>en_GB-alba-medium</code></td><td>UK English (Scottish)</td><td>Medium</td></tr>
+      <tr><td><code>en_GB-semaine-medium</code></td><td>UK English</td><td>Medium</td></tr>
+    </tbody>
+  </table>
+
+  <p>To switch voices, edit <code>MODEL=</code> at the top of <code>~/.local/share/piper/scripts/espeak</code>.</p>
+
+  <h2>Optional: Auto-Advance</h2>
+  <p>
+    The wrapper can automatically press <strong>Space</strong> after each dialogue line finishes speaking,
+    so you don't have to click — great for listening to a whole scene hands-free.
+  </p>
+  <pre><code>sudo apt install xdotool
+RENPY_MODE=1 ./YourGame</code></pre>
+
+  <h2>Repository Files</h2>
+  <table>
+    <thead>
+      <tr><th>File</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/piper_espeak_wrapper.sh"><code>piper_espeak_wrapper.sh</code></a></td><td>Main espeak wrapper (copy to <code>~/.local/share/piper/scripts/espeak</code>)</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/install.sh"><code>install.sh</code></a></td><td>Automated installation script</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/guide.txt"><code>guide.txt</code></a></td><td>Detailed step-by-step guide</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/note.txt"><code>note.txt</code></a></td><td>Quick reference for voice models</td></tr>
+    </tbody>
+  </table>
+
+</main>
+
+<footer>
+  <p>
+    Made with ❤️ for the Ren'Py community ·
+    <a href="https://github.com/zirize/piper-renpy-selfvoicing" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="https://www.reddit.com/r/RenPy/comments/1ganueb/selfvoicing_with_natural_voices_with_pipertts_on/" target="_blank" rel="noopener">Reddit</a> ·
+    Powered by <a href="https://github.com/rhasspy/piper" target="_blank" rel="noopener">Piper TTS</a>
+  </p>
+</footer>
+
+</body>
+</html>

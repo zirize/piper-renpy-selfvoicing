@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zirize.github.io/piper-renpy-selfvoicing/sitemap.xml
