@@ -1,5 +1,7 @@
 # Piper TTS — Ren'Py Self-Voicing on Linux
 
+📄 Project page: **[Piper TTS for Ren'Py Self-Voicing on Linux](https://zirize.github.io/piper-renpy-selfvoicing/)** · More projects: **[zirize.github.io](https://zirize.github.io/)**
+
 Use natural-sounding AI voices in [Ren'Py](https://www.renpy.org/) visual novels on Linux, powered by [Piper TTS](https://github.com/OHF-Voice/piper1-gpl).
 
 Ren'Py's built-in self-voicing feature uses `espeak` to read dialogue aloud. This project replaces it with a wrapper script that silently redirects speech synthesis to Piper — a fast, local neural TTS engine — while staying fully compatible with Ren'Py's existing self-voicing system.
