@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Piper TTS for Ren'Py Self-Voicing on Linux</title>
-  <meta name="description" content="Use natural AI voices in Ren'Py visual novels on Linux. Replace espeak with Piper TTS (Python package) for high-quality, local text-to-speech self-voicing." />
-  <meta name="keywords" content="Piper TTS, piper-tts, Ren'Py, self-voicing, text-to-speech, Linux, espeak, TTS, visual novel, accessibility, OHF Voice, Open Home Foundation" />
+  <meta name="description" content="Use natural AI voices in Ren'Py visual novels on Linux. Replace espeak with the standalone Piper TTS 1.2.0 binary for high-quality, local text-to-speech self-voicing." />
+  <meta name="keywords" content="Piper TTS, Ren'Py, self-voicing, text-to-speech, Linux, espeak, TTS, visual novel, accessibility, Korean TTS" />
   <meta name="author" content="zirize" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://zirize.github.io/piper-renpy-selfvoicing/" />
@@ -243,7 +243,7 @@
     <div class="feature-card">
       <div class="icon">🌍</div>
       <h3>Multiple Voices</h3>
-      <p>Choose from US and UK English voices. Switch with one line change.</p>
+      <p>US and UK English voices, plus an optional Korean voice picked automatically for lines with Hangul.</p>
     </div>
     <div class="feature-card">
       <div class="icon">⚡</div>
@@ -261,7 +261,7 @@
   <p>
     Ren'Py calls <code>espeak -v &lt;voice&gt; -a &lt;amp&gt; &lt;text&gt;</code> whenever self-voicing is active.
     This project installs a wrapper script named <code>espeak</code> that intercepts those calls
-    and redirects speech synthesis to <a href="https://github.com/OHF-Voice/piper1-gpl" target="_blank" rel="noopener">Piper TTS</a> instead.
+    and redirects speech synthesis to <a href="https://github.com/rhasspy/piper" target="_blank" rel="noopener">Piper TTS</a> instead.
     The audio is played back immediately via <code>aplay</code>.
   </p>
   <p>
@@ -274,31 +274,30 @@
     <div class="step-num">1</div>
     <div class="step-body">
       <h3>Install dependencies</h3>
-      <pre><code>sudo apt install python3 python3-pip alsa-utils</code></pre>
+      <pre><code>sudo apt install alsa-utils curl git</code></pre>
+      <p>No Python needed: this uses the standalone Piper 1.2.0 binary, which starts in about 0.25&nbsp;s per line (the Python package takes about 0.95&nbsp;s).</p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">2</div>
     <div class="step-body">
-      <h3>Install piper-tts</h3>
-      <pre><code>pip install --user piper-tts</code></pre>
-      <p>Or from a locally downloaded wheel: <code>pip install --user /path/to/piper_tts-1.4.2-*.whl</code></p>
+      <h3>Download Piper 1.2.0</h3>
+      <pre><code>mkdir -p $HOME/.local/share $HOME/.local/bin
+curl -L https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz \
+    | tar xz -C $HOME/.local/share</code></pre>
+      <p>This creates <code>~/.local/share/piper/</code> with the binary, its libraries and espeak-ng-data.</p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <h3>Create model directory and download a voice</h3>
+      <h3>Download a voice</h3>
       <pre><code>mkdir -p $HOME/.local/share/piper/models
-
-# List all available voices:
-python3 -m piper.download_voices
-
-# Download UK English (jenny_dioco):
-python3 -m piper.download_voices en_GB-jenny_dioco-medium \
-    --data-dir $HOME/.local/share/piper/models</code></pre>
+cd $HOME/.local/share/piper/models
+V=https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium
+curl -L -O $V.onnx -O $V.onnx.json</code></pre>
     </div>
   </div>
 
@@ -306,12 +305,9 @@ python3 -m piper.download_voices en_GB-jenny_dioco-medium \
     <div class="step-num">4</div>
     <div class="step-body">
       <h3>Install the wrapper script</h3>
-      <pre><code># Clone this repo (or download the script manually)
-git clone https://github.com/zirize/piper-renpy-selfvoicing.git
-mkdir -p $HOME/.local/share/piper/scripts
-cp piper-renpy-selfvoicing/piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
-chmod +x $HOME/.local/share/piper/scripts/espeak
-ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak</code></pre>
+      <pre><code>git clone https://github.com/zirize/piper-renpy-selfvoicing.git $HOME/.local/share/piper/scripts
+ln -sf $HOME/.local/share/piper/scripts/piper_espeak_wrapper.sh $HOME/.local/bin/espeak</code></pre>
+      <p>Or run <code>./install.sh</code> from a clone of the repository to do steps 2&ndash;4 at once (<code>./install.sh --korean</code> adds the Korean voice).</p>
     </div>
   </div>
 
@@ -336,24 +332,29 @@ ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak</code></p
       <tr><th>Model ID</th><th>Language</th><th>Quality</th></tr>
     </thead>
     <tbody>
-      <tr><td><code>en_US-hfc_female-medium</code></td><td>US English</td><td>Medium (default)</td></tr>
+      <tr><td><code>en_US-hfc_female-medium</code></td><td>US English</td><td>Medium</td></tr>
       <tr><td><code>en_US-amy-medium</code></td><td>US English</td><td>Medium</td></tr>
-      <tr><td><code>en_GB-jenny_dioco-medium</code></td><td>UK English</td><td>Medium</td></tr>
+      <tr><td><code>en_GB-jenny_dioco-medium</code></td><td>UK English</td><td>Medium (default)</td></tr>
       <tr><td><code>en_GB-cori-high</code></td><td>UK English</td><td>High</td></tr>
       <tr><td><code>en_GB-alba-medium</code></td><td>UK English (Scottish)</td><td>Medium</td></tr>
       <tr><td><code>en_GB-semaine-medium</code></td><td>UK English</td><td>Medium</td></tr>
     </tbody>
   </table>
 
-  <p>To switch voices, edit <code>MODEL=</code> at the top of <code>~/.local/share/piper/scripts/espeak</code>.</p>
+  <p>To switch voices, edit <code>MODEL=</code> at the top of <code>~/.local/share/piper/scripts/piper_espeak_wrapper.sh</code>. Voices whose <code>.onnx.json</code> says <code>"phoneme_type": "espeak"</code> work with Piper 1.2.0.</p>
 
-  <h2>Optional: Auto-Advance</h2>
+  <h2>Korean Voice</h2>
   <p>
-    The wrapper can automatically press <strong>Space</strong> after each dialogue line finishes speaking,
-    so you don't have to click — great for listening to a whole scene hands-free.
+    Lines containing Hangul are read with <code>ko_KR-kss-medium</code> (CC BY-NC-SA 4.0). Install it with <code>./install.sh --korean</code>.
+    Its config was written by Piper 1.5.0 and makes 1.2.0 abort with <code>Phonemes must be one codepoint</code>;
+    the installer removes the five multi-codepoint entries (<code>aɪ aʊ ɔɪ eɪ oʊ</code>), which Korean does not use.
   </p>
-  <pre><code>sudo apt install xdotool
-RENPY_MODE=1 ./YourGame</code></pre>
+
+  <h2>Auto-Advance (currently disabled)</h2>
+  <p>
+    The wrapper contains code that presses <strong>Space</strong> after each line (needs <code>xdotool</code>, X11 only, and <code>RENPY_MODE=1</code>).
+    It is disabled: the script exits right after playback. Delete the <code>exit 0</code> line after the <code>piper</code> command to re-enable it.
+  </p>
 
   <h2>Repository Files</h2>
   <table>
@@ -361,10 +362,10 @@ RENPY_MODE=1 ./YourGame</code></pre>
       <tr><th>File</th><th>Description</th></tr>
     </thead>
     <tbody>
-      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/piper_espeak_wrapper.sh"><code>piper_espeak_wrapper.sh</code></a></td><td>Main espeak wrapper (copy to <code>~/.local/share/piper/scripts/espeak</code>)</td></tr>
-      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/install.sh"><code>install.sh</code></a></td><td>Automated installation script</td></tr>
-      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/guide.txt"><code>guide.txt</code></a></td><td>Detailed step-by-step guide</td></tr>
-      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/note.txt"><code>note.txt</code></a></td><td>Quick reference for voice models</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/piper_espeak_wrapper.sh"><code>piper_espeak_wrapper.sh</code></a></td><td>The espeak wrapper; <code>~/.local/bin/espeak</code> links to it</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/install.sh"><code>install.sh</code></a></td><td>Installation script (<code>--korean</code> adds the Korean voice)</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/guide.txt"><code>guide.txt</code></a></td><td>Step-by-step guide</td></tr>
+      <tr><td><a href="https://github.com/zirize/piper-renpy-selfvoicing/blob/main/note.txt"><code>note.txt</code></a></td><td>Quick reference for the <code>MODEL</code> lines</td></tr>
     </tbody>
   </table>
 

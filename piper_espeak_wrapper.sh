@@ -10,9 +10,8 @@ LOG_DIR=/run/user/$UID/espeak_logs
 # Recommended for use with Ren'Py engines only.
 # Modify the script to support additional functions if needed.
 
-# Requires: piper-tts >= 1.4.2 installed via pip
-#   pip install --user piper-tts
-# Piper home page: https://github.com/OHF-Voice/piper1-gpl
+# Requires: the standalone Piper 1.2.0 binary extracted to ~/.local/share/piper
+# (https://github.com/rhasspy/piper/releases/tag/v1.2.0); see install.sh.
 
 # Set the model to use.
 # Since Ren'Py calls this script every time it needs to synthesize text,
@@ -31,13 +30,13 @@ MODEL=en_GB-jenny_dioco-medium
 MODEL_KO=ko_KR-kss-medium
 
 # Set the model directory and piper binary.
-# piper is installed to ~/.local/bin/piper via: pip install --user piper-tts
+# The Piper 1.2.0 archive puts the binary, its libraries and espeak-ng-data here.
 PIPER_DIR=$HOME/.local/share/piper
 PIPER_MODEL_DIR=$PIPER_DIR/models
 PIPER_BIN=$PIPER_DIR/piper
 
 # Set the options for piper.
-# Using --data-dir + model name (piper auto-detects the .onnx.json config).
+# piper reads <model>.onnx.json from next to the .onnx file.
 OPT_MODEL_DATA="--model $PIPER_MODEL_DIR/$MODEL.onnx"
 
 # Set the aplay binary and options.

@@ -1,4 +1,4 @@
-**Disclaimer:**  
+**Disclaimer:**
 This guide is intended for regular users, not developers.
 
 **Summary:**
@@ -7,148 +7,77 @@ Piper is considered one of the best free TTS (Text-to-Speech) engines for Linux.
 
 Ren'Py uses espeak to generate voice. This guide provides a method to use Piper with an espeak wrapper.
 
-Piper TTS >= 1.4.2 is a Python package maintained by the Open Home Foundation.
-Project home: https://github.com/OHF-Voice/piper1-gpl
+This guide uses the standalone Piper 1.2.0 binary (https://github.com/rhasspy/piper/releases/tag/v1.2.0). It needs no Python and starts in about 0.25 s per line; the newer Python package (piper-tts) takes about 0.95 s, and cannot be installed with "pip install --user" on recent Ubuntu/Debian.
+
+The shortest way is the script in this repository:
+
+    git clone https://github.com/zirize/piper-renpy-selfvoicing.git
+    cd piper-renpy-selfvoicing
+    ./install.sh
+
+The steps below do the same by hand.
 
 **Guide:**
 
-Check your Python version (3.9 or later required):
-
-    python3 --version
-
-Check that pip is available:
-
-    python3 -m pip --version
-
-If pip is missing, install it:
-
-    sudo apt install python3-pip
-
-Check if aplay is installed:
+Check that aplay, curl and git are installed:
 
     aplay --version
+    curl --version
+    git --version
 
-If missing, install it:
+If any is missing, install it (Ubuntu/Debian):
 
-    sudo apt install alsa-utils
+    sudo apt install alsa-utils curl git
 
-Install piper-tts from PyPI:
+Create the directories:
 
-    pip install --user piper-tts
+    mkdir -p $HOME/.local/share $HOME/.local/bin
 
-Or install from a locally downloaded wheel file:
+Download Piper 1.2.0 and extract it. This creates $HOME/.local/share/piper with the piper binary, its libraries and espeak-ng-data:
 
-    pip install --user /path/to/piper_tts-1.4.2-*.whl
+    curl -L https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz \
+        | tar xz -C $HOME/.local/share
 
-Verify piper is installed:
+Download a voice model and its config file, for example UK English (jenny_dioco):
 
-    piper --help
+    mkdir -p $HOME/.local/share/piper/models
+    cd $HOME/.local/share/piper/models
+    V=https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium
+    curl -L -O $V.onnx -O $V.onnx.json
 
-If piper is not found, make sure ~/.local/bin is in your PATH:
+Get the wrapper script and link it in as 'espeak':
+
+    git clone https://github.com/zirize/piper-renpy-selfvoicing.git $HOME/.local/share/piper/scripts
+    ln -sf $HOME/.local/share/piper/scripts/piper_espeak_wrapper.sh $HOME/.local/bin/espeak
+
+If 'espeak' is not found afterwards, make sure ~/.local/bin is in your PATH:
 
     export PATH="$HOME/.local/bin:$PATH"
 
 (Add this line to ~/.bashrc to make it permanent.)
 
-Create the model directory:
-
-    mkdir -p $HOME/.local/share/piper/models
-
-List all available voices (requires internet):
-
-    python3 -m piper.download_voices
-
-Download a voice model — for example, UK English (jenny_dioco):
-
-    python3 -m piper.download_voices en_GB-jenny_dioco-medium \
-        --data-dir $HOME/.local/share/piper/models
-
-Or download a US English voice:
-
-    python3 -m piper.download_voices en_US-hfc_female-medium \
-        --data-dir $HOME/.local/share/piper/models
-
-Install the espeak wrapper script:
-
-    mkdir -p $HOME/.local/share/piper/scripts
-    cp piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
-    chmod +x $HOME/.local/share/piper/scripts/espeak
-
-Create a symlink so 'espeak' is found in PATH:
-
-    ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
-
 Test the installation:
 
     espeak "Piper installation complete."
 
-If you can hear the voice, the installation was successful.
+If you can hear the voice, the installation was successful. Launch a Ren'Py game and press V to turn on self-voicing.
 
 
-The content of the espeak wrapper script (piper_espeak_wrapper.sh):
+**Changing the voice:**
 
-    #!/bin/bash
+Browse all voices at: https://rhasspy.github.io/piper-samples/
 
-    # This is a dummy espeak file used as a wrapper script for utilizing piper.
-    # It allows Ren'Py engines to utilize piper as a TTS engine.
-    # Requires: piper-tts >= 1.4.2 (pip install --user piper-tts)
-    # Home page: https://github.com/OHF-Voice/piper1-gpl
+Download the .onnx and .onnx.json of the voice you want into $HOME/.local/share/piper/models. The path under https://huggingface.co/rhasspy/piper-voices/resolve/main/ is <lang>/<locale>/<name>/<quality>/<model>, for example:
 
-    # Set the model to use.
-    #MODEL=en_GB-cori-high
-    #MODEL=en_GB-alba-medium
-    MODEL=en_GB-jenny_dioco-medium
-    #MODEL=en_GB-semaine-medium
-    #MODEL=en_US-hfc_female-medium
-    #MODEL=en_US-amy-medium
+    en/en_US/hfc_female/medium/en_US-hfc_female-medium
 
-    # Set the model directory and piper binary.
-    PIPER_MODEL_DIR=$HOME/.local/share/piper/models
-    PIPER_BIN=$HOME/.local/bin/piper
+Then set the MODEL variable at the top of $HOME/.local/share/piper/scripts/piper_espeak_wrapper.sh:
 
-    # Use --data-dir so piper finds the model by name (auto-detects .onnx.json).
-    OPT_MODEL_DATA="--model $MODEL --data-dir $PIPER_MODEL_DIR"
+    MODEL=en_US-hfc_female-medium
 
-    PLAY="aplay -D pulse -q -r 22050 -f S16_LE -t raw -"
+Ren'Py runs the script for every line, so the change takes effect on the next line.
 
-    if [ $# -eq 0 ]; then exit 0; fi
-
-    while getopts "v:a:" opt; do
-        case $opt in v) ;; a) ;; *) ;; esac
-    done
-    shift $((OPTIND - 1))
-
-    text=$(echo "$@" | sed 's/\b$(ls)\b//g')
-    if [ -p /dev/stdin ]; then text=$(cat); fi
-    if [ -z "$text" ]; then exit 0; fi
-
-    text=$(echo "$text" | sed 's/[…–]/  /g' 2>/dev/null)
-    text=$(echo "$text" | sed 's/[']/\x27/g' 2>/dev/null)
-    text=$(echo "$text" | sed 's/[^-a-zA-Z0-9,.?!:;@$%&"\x27 ]//g' 2>/dev/null)
-
-    tmp=$(echo $text | tr -d ' ')
-    if [ ${#tmp} -eq 0 ]; then exit 0; fi
-
-    if [[ $text == "Self-voicing"* ]]; then exit 0; fi
-    if [[ $text == "Skipping:"* ]]; then exit 0; fi
-
-    /usr/bin/pkill -x "piper"
-    /usr/bin/pkill -x "aplay"
-    /usr/bin/pkill -x "pw-play"
-
-    echo -e $text | $PIPER_BIN $OPT_MODEL_DATA --output-raw 2>/dev/null | $PLAY 2>/dev/null
-
-
-Visit this URL to browse all available models:
-https://rhasspy.github.io/piper-samples/
-
-Download additional models with:
-
-    python3 -m piper.download_voices <model-name> --data-dir $HOME/.local/share/piper/models
-
-Update the MODEL variable in the wrapper script to use the new model:
-
-    MODEL=en_US-lessac-medium
+Only voices with "phoneme_type": "espeak" in their .onnx.json work with Piper 1.2.0.
 
 Some recommended models:
 - en_GB-jenny_dioco-medium (default)
@@ -158,182 +87,20 @@ Some recommended models:
 - en_GB-alba-medium
 - en_GB-semaine-medium
 
-**Summary:**
 
-Piper is considered one of the best free TTS (Text-to-Speech) engines for Linux. It is a fast, local neural text-to-speech system that delivers high-quality sound.
+**Optional: Korean voice**
 
-Ren'Py uses espeak to generate voice. This guide provides a method to use Piper with an espeak wrapper.
-
-For more information, visit: https://github.com/rhasspy/piper
-
-**Guide:**
-
-Check if you have aplay and wget installed. Open your terminal and run:
-
-    aplay --version
-    wget --version
-
-If you don't have them, install them using your package manager (e.g., sudo apt install alsa-utils wget for Ubuntu/Debian).
-
-Create necessary directories
-
-    mkdir -p $HOME/.local/share/piper/models
-    mkdir -p $HOME/.local/share/piper/scripts
-    mkdir -p $HOME/.local/bin
-
-Download the Piper binary for PC
-
-    wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
-
-Extract the downloaded archive to the piper directory
-
-    tar xvfz piper_amd64.tar.gz --strip-components=1 -C $HOME/.local/share/piper
-
-Create a symbolic link for the piper binary
-
-    ln -sf $HOME/.local/share/piper/piper $HOME/.local/bin/piper
-
-Download a model and its config file
-
-    wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx?download=true" \
-        -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx
-    wget "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json?download=true" \
-        -O $HOME/.local/share/piper/models/en_US-hfc_female-medium.onnx.json
-
-Create an empty espeak script and make it executable
-
-    touch $HOME/.local/share/piper/scripts/espeak
-    chmod +x $HOME/.local/share/piper/scripts/espeak
-
-Open the script file with your favorite text editor
-
-    your_favorite_text_editor $HOME/.local/share/piper/scripts/espeak
+Lines that contain Hangul are read with MODEL_KO (ko_KR-kss-medium). Install it with "./install.sh --korean", or download it from ko/ko_KR/kss/medium/ko_KR-kss-medium and fix its config once: the file was written by Piper 1.5.0, and Piper 1.2.0 stops with "Phonemes must be one codepoint" until the five multi-codepoint entries (aɪ aʊ ɔɪ eɪ oʊ) are removed from "phoneme_id_map". install.sh shows the few lines of Python that do it. The voice is licensed CC BY-NC-SA 4.0 (non-commercial).
 
 
-The content of espeak (copy piper_espeak_wrapper.sh from this repository, or see below for a minimal version):
+**Optional: log of spoken lines**
 
-    #!/bin/bash
+    touch /run/user/$UID/espeak_log_text    # start logging
+    rm /run/user/$UID/espeak_log_text       # stop
 
-    # This is a dummy espeak file used as a wrapper script for utilizing piper.
-    # It allows Ren'Py engines to utilize piper as a TTS engine.
-    # Note: Many espeak functions are not supported.
-    # Recommended for use with Ren'Py engines only.
-
-    # Set the model to use.
-    # Since Ren'Py calls this script every time it needs to synthesize text,
-    # changing this value allows you to change the voice during gameplay.
-    #MODEL=en_GB-cori-high
-    #MODEL=en_GB-alba-medium
-    #MODEL=en_GB-jenny_dioco-medium
-    #MODEL=en_GB-semaine-medium
-    MODEL=en_US-hfc_female-medium
-    #MODEL=en_US-amy-medium
-
-    # Set the piper directory and binary.
-    PIPER_DIR=$HOME/.local/share/piper
-    PIPER_MODEL_DIR=$PIPER_DIR/models
-    PIPER_BIN=$HOME/.local/bin/piper
-
-    # Set the options for piper.
-    OPT_MODEL_DATA="--model $PIPER_MODEL_DIR/$MODEL.onnx"
-
-    # Audio output via PulseAudio
-    PLAY="aplay -D pulse -q -r 22050 -f S16_LE -t raw -"
-
-    # Check if there are no arguments
-    if [ $# -eq 0 ]; then
-        exit 0
-    fi
-
-    # Parse command-line arguments.
-    # Ren'Py passes arguments as -v <voice> -a <amp> <text>.
-    while getopts "v:a:" opt; do
-        case $opt in
-        v) ;;
-        a) ;;
-        *) ;;
-        esac
-    done
-
-    # Shift the parsed options away
-    shift $((OPTIND - 1))
-
-    # Remaining arguments which are the actual text to synthesize.
-    text=$(echo "$@" | sed 's/\b$(ls)\b//g')
-
-    # Check stdin pipe if there is any text.
-    if [ -p /dev/stdin ]; then
-        text=$(cat)
-    fi
-
-    # Check if the text is empty then quit.
-    if [ -z "$text" ]; then
-        exit 0
-    fi
-
-    # Clean up special/unicode characters for piper compatibility
-    text=$(echo "$text" | sed 's/[…–]/  /g' 2>/dev/null)
-    text=$(echo "$text" | sed 's/[']/\x27/g' 2>/dev/null)
-    text=$(echo "$text" | sed 's/[^-a-zA-Z0-9,.?!:;@$%&"\x27 ]//g' 2>/dev/null)
-
-    # Check if text is empty after cleanup
-    tmp=$(echo $text | tr -d ' ')
-    if [ ${#tmp} -eq 0 ]; then
-        exit 0
-    fi
-
-    # Skip Ren'Py self-voicing system messages
-    if [[ $text == "Self-voicing"* ]]; then
-        exit 0
-    fi
-    if [[ $text == "Skipping:"* ]]; then
-        exit 0
-    fi
-
-    # Terminate any previously running instances to prevent overlapping voices.
-    /usr/bin/pkill -x "piper"
-    /usr/bin/pkill -x "aplay"
-    /usr/bin/pkill -x "pw-play"
-
-    # Synthesize the text using piper and play the resulting audio.
-    echo -e $text | $PIPER_BIN $OPT_MODEL_DATA --output-raw 2>/dev/null | $PLAY 2>/dev/null
-
-Create a symbolic link so espeak is found in PATH
-
-    ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
-
-Test the installation
-
-    espeak "Piper installation complete."
-
-If you can hear the voice, the installation was successful.
+Lines are appended to /run/user/$UID/espeak_logs/espeak_output.log.
 
 
-**Optional: Auto-advance (auto-skip) feature**
+**Auto-advance (currently disabled)**
 
-The full wrapper script (piper_espeak_wrapper.sh) supports automatically pressing Space after each line of dialogue finishes speaking, simulating Ren'Py's auto mode while self-voicing is active.
-
-Requirements:
-- Install xdotool: `sudo apt install xdotool`
-- Set the environment variable before launching Ren'Py: `RENPY_MODE=1 ./your_game`
-
-
-**Available models:**
-
-Visit this URL to browse and download models: https://rhasspy.github.io/piper-samples/
-
-After downloading, place the model and config files in the models directory ($HOME/.local/share/piper/models):
-- A .onnx model file, such as en_US-lessac-medium.onnx
-- A .onnx.json config file, such as en_US-lessac-medium.onnx.json
-
-Update the MODEL variable in the script file to use the model you want:
-
-    MODEL=en_US-lessac-medium
-
-Some recommended models:
-- en_US-hfc_female-medium (default)
-- en_US-amy-medium
-- en_GB-jenny_dioco-medium
-- en_GB-cori-high
-- en_GB-alba-medium
-- en_GB-semaine-medium
+The wrapper contains code that presses Space after each line (needs xdotool, X11 only, and RENPY_MODE=1 when launching the game). It is disabled: the script exits right after playback. Delete the "exit 0" line after the piper command to re-enable it.

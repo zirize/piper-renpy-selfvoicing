@@ -1,98 +1,67 @@
 #!/bin/bash
-
-# Using self-voicing with natural voices in Linux with Piper-TTS
-# Piper TTS >= 1.4.2 (Python package)
-# Home page: https://github.com/OHF-Voice/piper1-gpl
-
-# Disclaimer: This guide is intended for regular Linux users, not developers.
-# If you are using espeak outside of Ren'Py, you may experience conflicts.
-
-# What is Piper?
-# Piper is considered one of the best free TTS (Text-to-Speech) engines for Linux.
-# It is a fast, local neural text-to-speech system that delivers high-quality sound.
-
-# Ren'Py uses espeak to generate voice. This guide provides a method to use Piper
-# with an espeak wrapper script.
-
-
-# --- Requirements ---
-# Python 3.9 or later is required.
-# Check your Python version:
-python3 --version
-
-# Check that pip is available:
-python3 -m pip --version
-# If pip is missing: sudo apt install python3-pip
-
-
-# --- Check audio dependency ---
-aplay --version
-# If missing: sudo apt install alsa-utils
-
-
-# --- Install piper-tts ---
-# Option A: Install from PyPI (recommended if you have internet access)
-pip install --user piper-tts
-
-# Option B: Install from a locally downloaded wheel file
-# pip install --user /path/to/piper_tts-1.4.2-*.whl
-
-# pip installs the 'piper' command to ~/.local/bin/piper
-# $HOME/.local/bin is already in PATH on most modern Linux distros.
-# Verify:
-which piper || echo "piper not found — make sure ~/.local/bin is in PATH"
-
-
-# --- Create the model directory ---
-mkdir -p $HOME/.local/share/piper/models
-
-
-# --- Download a voice model ---
-# Use the built-in downloader (requires internet):
-#   python3 -m piper.download_voices        <- lists all available voices
-#   python3 -m piper.download_voices en_GB-jenny_dioco-medium --data-dir $HOME/.local/share/piper/models
-
-# Default: UK English (jenny_dioco) — change to your preferred voice.
-# Browse all voices at: https://rhasspy.github.io/piper-samples/
-python3 -m piper.download_voices en_GB-jenny_dioco-medium \
-    --data-dir $HOME/.local/share/piper/models
-
-# Other useful voices (uncomment to download):
-# python3 -m piper.download_voices en_US-hfc_female-medium --data-dir $HOME/.local/share/piper/models
-# python3 -m piper.download_voices en_US-amy-medium        --data-dir $HOME/.local/share/piper/models
-# python3 -m piper.download_voices en_GB-cori-high         --data-dir $HOME/.local/share/piper/models
-# python3 -m piper.download_voices en_GB-alba-medium       --data-dir $HOME/.local/share/piper/models
-
-
-# --- Install the espeak wrapper script ---
-mkdir -p $HOME/.local/share/piper/scripts
-
-# Copy from this repository:
-cp piper_espeak_wrapper.sh $HOME/.local/share/piper/scripts/espeak
-chmod +x $HOME/.local/share/piper/scripts/espeak
-
-# Create a symlink so 'espeak' is found in PATH
-ln -sf $HOME/.local/share/piper/scripts/espeak $HOME/.local/bin/espeak
-
-
-# --- Test the installation ---
-espeak "Piper installation complete."
-
-# If you can hear the voice, the installation was successful.
-
-
-# --- Add other models later ---
-# List available voices:
-#   python3 -m piper.download_voices
+# Install Piper 1.2.0 (standalone binary) and the espeak wrapper for Ren'Py self-voicing.
 #
-# Download to model directory:
-#   python3 -m piper.download_voices <model-name> --data-dir $HOME/.local/share/piper/models
+#   ./install.sh            English voice only (en_GB-jenny_dioco-medium)
+#   ./install.sh --korean   also the Korean voice (ko_KR-kss-medium), needs python3
 #
-# Then update the MODEL variable at the top of the espeak wrapper script.
+# Everything goes under ~/.local/share/piper and ~/.local/bin/espeak.
+# Undo: rm -rf ~/.local/share/piper ~/.local/bin/espeak
+set -euo pipefail
 
+PIPER_DIR=$HOME/.local/share/piper
+PIPER_URL=https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
+VOICES=https://huggingface.co/rhasspy/piper-voices/resolve/main
+REPO=https://github.com/zirize/piper-renpy-selfvoicing.git
 
-# --- Optional: Auto-advance feature ---
-# Install xdotool to enable automatic page-turning after each line:
-#   sudo apt install xdotool
-# Then launch your Ren'Py game with:
-#   RENPY_MODE=1 ./YourGame
+korean=0
+[ "${1:-}" = "--korean" ] && korean=1
+
+for cmd in curl tar git aplay perl; do
+    command -v $cmd >/dev/null || { echo "missing: $cmd (e.g. sudo apt install curl git alsa-utils perl)"; exit 1; }
+done
+[ "$(uname -m)" = "x86_64" ] || { echo "this script installs the x86_64 build only"; exit 1; }
+
+# --- Piper 1.2.0: binary, libraries and espeak-ng-data in one archive ---
+mkdir -p $HOME/.local/share $HOME/.local/bin
+if [ ! -x $PIPER_DIR/piper ]; then
+    curl -fL $PIPER_URL | tar xz -C $HOME/.local/share    # creates ~/.local/share/piper/
+fi
+
+# --- Voice models: a .onnx file and its .onnx.json config ---
+get_voice() {    # get_voice <lang>/<locale>/<name>/<quality>/<model>
+    local m=$(basename $1)
+    [ -s $PIPER_DIR/models/$m.onnx ] && return
+    curl -fL -o $PIPER_DIR/models/$m.onnx      "$VOICES/$1.onnx"
+    curl -fL -o $PIPER_DIR/models/$m.onnx.json "$VOICES/$1.onnx.json"
+}
+mkdir -p $PIPER_DIR/models
+get_voice en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium
+
+if [ $korean = 1 ]; then
+    get_voice ko/ko_KR/kss/medium/ko_KR-kss-medium
+    # This config was written by piper 1.5.0. Piper 1.2.0 refuses its five
+    # multi-codepoint phonemes ("Phonemes must be one codepoint"); Korean does not use them.
+    python3 - $PIPER_DIR/models/ko_KR-kss-medium.onnx.json <<'EOF'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+for k in [k for k in d['phoneme_id_map'] if len(k) != 1]:
+    del d['phoneme_id_map'][k]
+json.dump(d, open(p, 'w'), ensure_ascii=False)
+EOF
+fi
+
+# --- The wrapper: this repository, linked in as 'espeak' ---
+if [ ! -e $PIPER_DIR/scripts ]; then
+    git clone $REPO $PIPER_DIR/scripts
+fi
+chmod +x $PIPER_DIR/scripts/piper_espeak_wrapper.sh
+ln -sf $PIPER_DIR/scripts/piper_espeak_wrapper.sh $HOME/.local/bin/espeak
+
+# --- Test ---
+$HOME/.local/bin/espeak "Piper installation complete."
+if [ $korean = 1 ]; then
+    $HOME/.local/bin/espeak "한국어 음성도 설치되었습니다."
+fi
+
+echo "Done. If ~/.local/bin is not in PATH, add: export PATH=\"\$HOME/.local/bin:\$PATH\""
