@@ -1,6 +1,8 @@
 #!/bin/bash
 
 toggle_file=/run/user/$UID/espeak_auto_skip
+log_toggle_file=/run/user/$UID/espeak_log_text
+LOG_DIR=/run/user/$UID/espeak_logs
 
 # This is a dummy espeak file used as a wrapper script for utilizing piper.
 # It allows Ren'Py engines to utilize piper as a TTS engine.
@@ -22,14 +24,21 @@ MODEL=en_GB-jenny_dioco-medium
 #MODEL=en_US-hfc_female-medium
 #MODEL=en_US-amy-medium
 
+# Model used instead of MODEL when the text contains Hangul.
+# The stock ko_KR-kss-medium.onnx.json (piper 1.5.0 format) crashes piper 1.2.0
+# with "Phonemes must be one codepoint"; the installed copy has the five
+# multi-codepoint English diphthong entries (aɪ aʊ ɔɪ eɪ oʊ) removed.
+MODEL_KO=ko_KR-kss-medium
+
 # Set the model directory and piper binary.
 # piper is installed to ~/.local/bin/piper via: pip install --user piper-tts
-PIPER_MODEL_DIR=$HOME/.local/share/piper/models
-PIPER_BIN=$HOME/.local/bin/piper
+PIPER_DIR=$HOME/.local/share/piper
+PIPER_MODEL_DIR=$PIPER_DIR/models
+PIPER_BIN=$PIPER_DIR/piper
 
 # Set the options for piper.
 # Using --data-dir + model name (piper auto-detects the .onnx.json config).
-OPT_MODEL_DATA="--model $MODEL --data-dir $PIPER_MODEL_DIR"
+OPT_MODEL_DATA="--model $PIPER_MODEL_DIR/$MODEL.onnx"
 
 # Set the aplay binary and options.
 
@@ -86,8 +95,22 @@ text=$(echo "$text" | sed 's/[’]/\x27/g' 2>/dev/null)
 if [ $? -ne 0 ]; then
     exit 0
 fi
-text=$(echo "$text" | sed 's/[^-a-zA-Z0-9,.?!:;@$%&"\x27 ]//g' 2>/dev/null)
+# Korean text (any Hangul syllable or jamo) switches to the Korean model and
+# keeps Hangul through the character filter.
+HANGUL='\x{AC00}-\x{D7A3}\x{3131}-\x{318E}'
+if echo "$text" | perl -CSD -0777 -ne "exit(/[$HANGUL]/ ? 0 : 1)"; then
+    MODEL=$MODEL_KO
+    OPT_MODEL_DATA="--model $PIPER_MODEL_DIR/$MODEL.onnx"
+    text=$(echo "$text" | perl -CSD -pe "s/[^-a-zA-Z0-9,.?!:;\@\\\$%&\"' $HANGUL]//g")
+else
+    text=$(echo "$text" | sed 's/[^-a-zA-Z0-9,.?!:;@$%&"\x27 ]//g' 2>/dev/null)
+fi
 text=$(echo "$text" | sed 's/\([A-Z][a-z]*\)\. \([A-Z]\)/\1.\2/g')
+
+# Ren'Py joins every text on screen with ": ". Symbol-only texts (e.g. "·"
+# quick-menu separators) were just stripped above, leaving ": : : <dialogue>".
+# Collapse runs of colons and drop leading/trailing ones.
+text=$(echo "$text" | sed -E 's/:([[:space:]]*:)+/:/g; s/^[[:space:]:]+//; s/[[:space:]:]+$//')
 
 if [ $? -ne 0 ]; then
     exit 0
@@ -101,6 +124,12 @@ fi
 
 # Print the text for debug
 echo -e $text
+
+# Save the echoed text to a log file if the toggle is enabled
+if [ -f "$log_toggle_file" ]; then
+    mkdir -p "$LOG_DIR"
+    echo -e "$text" >> "$LOG_DIR/espeak_output.log"
+fi
 
 # Terminate any previously running instances to prevent overlapping voices.
 /usr/bin/pkill -x "piper"
@@ -122,7 +151,9 @@ fi
 # Synthesize the text using piper and play the resulting audio using aplay.
 #echo -e $text | $PIPER_BIN $OPT_MODEL_DATA --output-raw 2>/dev/null | $APLAY $APLAY_OPT 2>/dev/null
 echo -e $text | $PIPER_BIN $OPT_MODEL_DATA --output-raw 2>/dev/null | $PLAY 2>/dev/null
-#echo -e $text | $PIPER_BIN $OPT_MODEL_DATA 
+#echo -e "$text" | $PIPER_BIN $OPT_MODEL_DATA --output_raw 2>/dev/null | $PLAY 2>/dev/null
+
+exit 0
 
 # Check if toglgle file exists then exit
 if [ ! -f "$toggle_file" ]; then
